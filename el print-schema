@@ -1,0 +1,14 @@
+                       Table "public.cetus_swap_events"
+         Column          |       Type        | Collation | Nullable | Default 
+-------------------------+-------------------+-----------+----------+---------
+ id                      | character varying |           | not null | 
+ pool_id                 | character varying |           | not null | 
+ amount_a_in             | bigint            |           | not null | 
+ amount_a_out            | bigint            |           | not null | 
+ amount_b_in             | bigint            |           | not null | 
+ amount_b_out            | bigint            |           | not null | 
+ timestamp               | bigint            |           | not null | 
+ last_checkpoint_updated | bigint            |           | not null | 
+Indexes:
+    "cetus_swap_events_pkey" PRIMARY KEY, btree (id)
+
