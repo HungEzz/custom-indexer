@@ -72,8 +72,6 @@ impl CetusIndexerWorker {
                             .set((
                                 cetus_add_liquidity_events::liquidity.eq(sql("excluded.liquidity")),
                                 cetus_add_liquidity_events::after_liquidity.eq(sql("excluded.after_liquidity")),
-                                cetus_add_liquidity_events::pool.eq(sql("excluded.pool")),
-                                cetus_add_liquidity_events::position.eq(sql("excluded.position")),
                             ))
                             .execute(conn)
                             .await
@@ -90,8 +88,6 @@ impl CetusIndexerWorker {
                             .set((
                                 cetus_remove_liquidity_events::liquidity.eq(sql("excluded.liquidity")),
                                 cetus_remove_liquidity_events::after_liquidity.eq(sql("excluded.after_liquidity")),
-                                cetus_remove_liquidity_events::pool.eq(sql("excluded.pool")),
-                                cetus_remove_liquidity_events::position.eq(sql("excluded.position")),
                             ))
                             .execute(conn)
                             .await

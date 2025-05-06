@@ -5,6 +5,9 @@ license = "Apache-2.0"
 publish = false
 edition = "2021"
 version.workspace = true
+description = "Cetus events indexer for the Sui blockchain"
+repository = "https://github.com/mystenlabs/suins-indexer"
+default-run = "api_server"
 
 [dependencies]
 diesel = { workspace = true, features = ["serde_json"] }
@@ -44,6 +47,7 @@ actix-web = "4.4.0"
 actix-cors = "0.6.4"
 dotenv = "0.15.0"
 env_logger = "0.10.0"
+num_cpus = "1.16.0"
 
 [dev-dependencies]
 rand.workspace = true

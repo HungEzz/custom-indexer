@@ -5,8 +5,6 @@ diesel::table! {
         id -> Varchar,
         liquidity -> Varchar,
         after_liquidity -> Varchar,
-        pool -> Varchar,
-        position -> Varchar,
     }
 }
 
@@ -15,8 +13,6 @@ diesel::table! {
         id -> Varchar,
         liquidity -> Varchar,
         after_liquidity -> Varchar,
-        pool -> Varchar,
-        position -> Varchar,
     }
 }
 

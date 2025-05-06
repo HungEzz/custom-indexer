@@ -213,8 +213,6 @@ impl CetusIndexer {
                                 id: unique_id,
                                 liquidity: data.liquidity.to_string(),
                                 after_liquidity: data.after_liquidity.to_string(),
-                                pool: data.pool.to_string(),
-                                position: data.position.to_string(),
                             });
                         }
                         Err(e) => {
@@ -244,8 +242,6 @@ impl CetusIndexer {
                                 id: unique_id,
                                 liquidity: data.liquidity.to_string(),
                                 after_liquidity: data.after_liquidity.to_string(),
-                                pool: data.pool.to_string(),
-                                position: data.position.to_string(),
                             });
                         }
                         Err(e) => {
