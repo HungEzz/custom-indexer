@@ -1,13 +1,22 @@
 -- Your SQL goes here
 CREATE TABLE IF NOT EXISTS "cetus_swap_events" (
     "id" VARCHAR NOT NULL PRIMARY KEY,
-    "amount_a_in" INT8 NOT NULL,
-    "amount_a_out" INT8 NOT NULL,
-    "amount_b_in" INT8 NOT NULL,
-    "amount_b_out" INT8 NOT NULL
+    "amount_in" INT8 NOT NULL,
+    "amount_out" INT8 NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS "cetus_liquidity_events" (
+CREATE TABLE IF NOT EXISTS "cetus_add_liquidity_events" (
     "id" VARCHAR NOT NULL PRIMARY KEY,
-    "liquidity" INT8 NOT NULL
+    "liquidity" VARCHAR NOT NULL,
+    "after_liquidity" VARCHAR NOT NULL,
+    "pool" VARCHAR NOT NULL,
+    "position" VARCHAR NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS "cetus_remove_liquidity_events" (
+    "id" VARCHAR NOT NULL PRIMARY KEY,
+    "liquidity" VARCHAR NOT NULL,
+    "after_liquidity" VARCHAR NOT NULL,
+    "pool" VARCHAR NOT NULL,
+    "position" VARCHAR NOT NULL
 );

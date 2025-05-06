@@ -8,6 +8,7 @@ use diesel_async::{scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl
 use dotenvy::dotenv;
 use mysten_service::metrics::start_basic_prometheus_server;
 use prometheus::Registry;
+use rustls;
 use std::env;
 use std::path::PathBuf;
 use sui_data_ingestion_core::{
@@ -20,14 +21,14 @@ use tracing::info;
 use suins_indexer::{
     get_connection_pool,
     indexer::CetusIndexer,
-    models::{CetusLiquidityEvent, CetusSwapEvent},
-    schema::{cetus_liquidity_events, cetus_swap_events},
+    models::{CetusAddLiquidityEvent, CetusRemoveLiquidityEvent, CetusSwapEvent},
+    schema::{cetus_add_liquidity_events, cetus_remove_liquidity_events, cetus_swap_events},
     PgConnectionPool,
 };
 
-struct CetusIndexerWorker {
-    pg_pool: PgConnectionPool,
+pub struct CetusIndexerWorker {
     indexer: CetusIndexer,
+    pg_pool: PgConnectionPool,
 }
 
 impl CetusIndexerWorker {
@@ -35,9 +36,10 @@ impl CetusIndexerWorker {
     async fn commit_to_db(
         &self,
         swap_events: &[CetusSwapEvent],
-        liquidity_events: &[CetusLiquidityEvent],
+        add_liquidity_events: &[CetusAddLiquidityEvent],
+        remove_liquidity_events: &[CetusRemoveLiquidityEvent],
     ) -> Result<()> {
-        if swap_events.is_empty() && liquidity_events.is_empty() {
+        if swap_events.is_empty() && add_liquidity_events.is_empty() && remove_liquidity_events.is_empty() {
             return Ok(());
         }
 
@@ -52,10 +54,8 @@ impl CetusIndexerWorker {
                             .on_conflict(cetus_swap_events::id)
                             .do_update()
                             .set((
-                                cetus_swap_events::amount_a_in.eq(sql("excluded.amount_a_in")),
-                                cetus_swap_events::amount_a_out.eq(sql("excluded.amount_a_out")),
-                                cetus_swap_events::amount_b_in.eq(sql("excluded.amount_b_in")),
-                                cetus_swap_events::amount_b_out.eq(sql("excluded.amount_b_out")),
+                                cetus_swap_events::amount_in.eq(sql("excluded.amount_in")),
+                                cetus_swap_events::amount_out.eq(sql("excluded.amount_out")),
                             ))
                             .execute(conn)
                             .await
@@ -64,18 +64,39 @@ impl CetusIndexerWorker {
                             });
                     }
 
-                    if !liquidity_events.is_empty() {
-                        diesel::insert_into(cetus_liquidity_events::table)
-                            .values(liquidity_events)
-                            .on_conflict(cetus_liquidity_events::id)
+                    if !add_liquidity_events.is_empty() {
+                        diesel::insert_into(cetus_add_liquidity_events::table)
+                            .values(add_liquidity_events)
+                            .on_conflict(cetus_add_liquidity_events::id)
                             .do_update()
                             .set((
-                                cetus_liquidity_events::liquidity.eq(sql("excluded.liquidity")),
+                                cetus_add_liquidity_events::liquidity.eq(sql("excluded.liquidity")),
+                                cetus_add_liquidity_events::after_liquidity.eq(sql("excluded.after_liquidity")),
+                                cetus_add_liquidity_events::pool.eq(sql("excluded.pool")),
+                                cetus_add_liquidity_events::position.eq(sql("excluded.position")),
                             ))
                             .execute(conn)
                             .await
                             .unwrap_or_else(|_| {
-                                panic!("Failed to process liquidity events: {:?}", liquidity_events)
+                                panic!("Failed to process add liquidity events: {:?}", add_liquidity_events)
+                            });
+                    }
+
+                    if !remove_liquidity_events.is_empty() {
+                        diesel::insert_into(cetus_remove_liquidity_events::table)
+                            .values(remove_liquidity_events)
+                            .on_conflict(cetus_remove_liquidity_events::id)
+                            .do_update()
+                            .set((
+                                cetus_remove_liquidity_events::liquidity.eq(sql("excluded.liquidity")),
+                                cetus_remove_liquidity_events::after_liquidity.eq(sql("excluded.after_liquidity")),
+                                cetus_remove_liquidity_events::pool.eq(sql("excluded.pool")),
+                                cetus_remove_liquidity_events::position.eq(sql("excluded.position")),
+                            ))
+                            .execute(conn)
+                            .await
+                            .unwrap_or_else(|_| {
+                                panic!("Failed to process remove liquidity events: {:?}", remove_liquidity_events)
                             });
                     }
 
@@ -92,26 +113,30 @@ impl Worker for CetusIndexerWorker {
     type Result = ();
     async fn process_checkpoint(&self, checkpoint: &CheckpointData) -> Result<()> {
         let checkpoint_seq_number = checkpoint.checkpoint_summary.sequence_number;
-        let (swap_events, liquidity_events) = self.indexer.process_checkpoint(checkpoint);
+        let (swap_events, add_liquidity_events, remove_liquidity_events) = self.indexer.process_checkpoint(checkpoint);
 
         // Log progress every 1000 checkpoints
         if checkpoint_seq_number % 1000 == 0 {
             info!("Checkpoint sequence number: {}", checkpoint_seq_number);
         }
-        self.commit_to_db(&swap_events, &liquidity_events).await?;
+        self.commit_to_db(&swap_events, &add_liquidity_events, &remove_liquidity_events).await?;
         Ok(())
     }
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // Initialize the crypto provider for rustls
+    rustls::crypto::ring::default_provider().install_default().expect("Failed to install default crypto provider");
+    
     let _guard = mysten_service::logging::init();
     dotenv().ok();
     
     // Load configuration from environment variables
     let remote_storage = env::var("REMOTE_STORAGE").ok();
     let swap_event_type = env::var("SWAP_EVENT_TYPE").ok();
-    let liquidity_event_type = env::var("LIQUIDITY_EVENT_TYPE").ok();
+    let add_liquidity_event_type = env::var("ADD_LIQUIDITY_EVENT_TYPE").ok();
+    let remove_liquidity_event_type = env::var("REMOVE_LIQUIDITY_EVENT_TYPE").ok();
     let backfill_progress_file_path = env::var("BACKFILL_PROGRESS_FILE_PATH")
         .unwrap_or("./backfill_progress/backfill_progress".to_string());
     let checkpoints_dir = env::var("CHECKPOINTS_DIR").unwrap_or("./checkpoints".to_string());
@@ -127,10 +152,10 @@ async fn main() -> Result<()> {
     let mut executor = IndexerExecutor::new(progress_store, 1, metrics);
 
     // Initialize the Cetus indexer with event type configuration
-    let indexer_setup = if let (Some(swap_event_type), Some(liquidity_event_type)) =
-        (swap_event_type, liquidity_event_type)
+    let indexer_setup = if let (Some(swap_event_type), Some(add_liquidity_event_type), Some(remove_liquidity_event_type)) =
+        (swap_event_type.clone(), add_liquidity_event_type.clone(), remove_liquidity_event_type.clone())
     {
-        CetusIndexer::new(swap_event_type, liquidity_event_type)
+        CetusIndexer::new(swap_event_type, add_liquidity_event_type, remove_liquidity_event_type)
     } else {
         CetusIndexer::default()
     };

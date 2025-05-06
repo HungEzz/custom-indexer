@@ -1,7 +1,7 @@
 // Copyright (c) Mysten Labs, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::schema::{cetus_liquidity_events, cetus_swap_events};
+use crate::schema::{cetus_add_liquidity_events, cetus_remove_liquidity_events, cetus_swap_events};
 use diesel::prelude::*;
 
 #[derive(Queryable, Selectable, Insertable, AsChangeset, Debug)]
@@ -9,16 +9,28 @@ use diesel::prelude::*;
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct CetusSwapEvent {
     pub id: String,
-    pub amount_a_in: i64,
-    pub amount_a_out: i64,
-    pub amount_b_in: i64,
-    pub amount_b_out: i64,
+    pub amount_in: i64,
+    pub amount_out: i64,
 }
 
 #[derive(Queryable, Selectable, Insertable, AsChangeset, Debug)]
-#[diesel(table_name = cetus_liquidity_events)]
+#[diesel(table_name = cetus_add_liquidity_events)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct CetusLiquidityEvent {
+pub struct CetusAddLiquidityEvent {
     pub id: String,
-    pub liquidity: i64,
+    pub liquidity: String,
+    pub after_liquidity: String,
+    pub pool: String,
+    pub position: String,
+}
+
+#[derive(Queryable, Selectable, Insertable, AsChangeset, Debug)]
+#[diesel(table_name = cetus_remove_liquidity_events)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct CetusRemoveLiquidityEvent {
+    pub id: String,
+    pub liquidity: String,
+    pub after_liquidity: String,
+    pub pool: String,
+    pub position: String,
 }

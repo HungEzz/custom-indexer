@@ -33,12 +33,17 @@ url.workspace = true
 dotenvy = "0.15"
 move_core_types = { git = "https://github.com/mystenlabs/sui", package = "move-core-types" }
 mysten_service = { git = "https://github.com/mystenlabs/sui", package = "mysten-service" }
-rustls = "0.23.26"
+rustls = { version = "0.23.26", features = ["ring"] }
 webpki-roots = "0.26.3"
 tokio-postgres-rustls = "0.12.0"
 tokio-postgres = "0.7.12"
 futures-util = "0.3.30"
 chrono = "0.4.41"
+hex = "0.4.3"
+actix-web = "4.4.0"
+actix-cors = "0.6.4"
+dotenv = "0.15.0"
+env_logger = "0.10.0"
 
 [dev-dependencies]
 rand.workspace = true
